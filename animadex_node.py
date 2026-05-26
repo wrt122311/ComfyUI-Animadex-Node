@@ -137,8 +137,8 @@ class AnimadexCharacterNode:
             },
         }
 
-    RETURN_TYPES = ("IMAGE", "STRING", "STRING")
-    RETURN_NAMES = ("image", "trigger_words", "prompt_tags")
+    RETURN_TYPES = ("IMAGE", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("image", "trigger_words", "prompt_tags", "trigger_and_tags")
     FUNCTION = "get_character"
     CATEGORY = "Animadex"
 
@@ -168,7 +168,11 @@ class AnimadexCharacterNode:
             print(f"[Animadex] Error downloading image from {url}: {e}")
             image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
 
-        return (image, trigger, tags)
+        trigger_and_tags = trigger
+        if tags:
+            trigger_and_tags = f"{trigger}, {tags}" if trigger else tags
+
+        return (image, trigger, tags, trigger_and_tags)
 
 NODE_CLASS_MAPPINGS = {
     "AnimadexCharacterNode": AnimadexCharacterNode
