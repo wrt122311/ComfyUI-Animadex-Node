@@ -145,7 +145,7 @@ class AnimadexCharacterNode:
     def get_character(self, character, use_high_res_image):
         if character not in char_dict:
             empty_image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
-            return (empty_image, "", "")
+            return (empty_image, "", "", "")
 
         c = char_dict[character]
         trigger = c.get("trigger", "")
