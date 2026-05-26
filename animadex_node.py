@@ -73,6 +73,7 @@ async def search_characters(request):
     page = int(request.rel_url.query.get("page", "1"))
     is_random = request.rel_url.query.get("random", "0") == "1"
     favorites = request.rel_url.query.get("favorites", "").split(",")
+    fav_copies = request.rel_url.query.get("fav_copies", "").split(",")
     fav_filter_only = request.rel_url.query.get("fav_only", "0") == "1"
     
     page_size = 50
@@ -81,7 +82,10 @@ async def search_characters(request):
     
     # 1. Filter by favorites if toggled
     if fav_filter_only:
-        filtered = [c for c in filtered if c.get('_display_name') in favorites]
+        filtered = [
+            c for c in filtered 
+            if c.get('_display_name') in favorites or (c.get('copyright_name') or c.get('copyright') or '') in fav_copies
+        ]
 
     # 2. Filter by copyright exact match (case insensitive)
     if copy_filter:

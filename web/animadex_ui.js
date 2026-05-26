@@ -368,9 +368,10 @@ function openAnimadexModal(charWidget, btnWidget, node) {
             }
             
             const favsList = getFavorites(FAV_STORAGE_KEY).join(",");
-            let url = `/animadex/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&copyright=${encodeURIComponent(currentCopyright)}&favorites=${encodeURIComponent(favsList)}`;
+            const favCopiesList = getFavorites(FAV_COPY_STORAGE_KEY).join(",");
+            let url = `/animadex/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&copyright=${encodeURIComponent(currentCopyright)}&favorites=${encodeURIComponent(favsList)}&fav_copies=${encodeURIComponent(favCopiesList)}`;
             if (isRandom) url += `&random=1`;
-            if (favOnly && !currentCopyright) url += `&fav_only=1`;
+            if (favOnly) url += `&fav_only=1`;
             
             isRandom = false; 
 
