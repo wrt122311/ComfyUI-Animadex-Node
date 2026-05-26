@@ -232,7 +232,7 @@ function openAnimadexModal(charWidget, btnWidget, node) {
             b.innerHTML = text;
             if (isActive) b.classList.add('active');
             b.onclick = () => {
-                currentPage = page;
+                state.currentPage = page;
                 loadData();
             };
             return b;
@@ -249,13 +249,13 @@ function openAnimadexModal(charWidget, btnWidget, node) {
         const prev = document.createElement('button');
         prev.className = 'animadex-page-btn';
         prev.innerHTML = '◀ Prev';
-        prev.disabled = currentPage <= 1;
-        prev.onclick = () => { currentPage--; loadData(); };
+        prev.disabled = state.currentPage <= 1;
+        prev.onclick = () => { state.currentPage--; loadData(); };
         footer.appendChild(prev);
 
         // Confirm Button
         const confirmBtn = document.createElement('button');
-        confirmBtn.className = 'animadex-page-btn';
+        confirmBtn.className = 'animadex-page-btn confirm-btn';
         confirmBtn.style.background = '#a6e3a1';
         confirmBtn.style.borderColor = '#a6e3a1';
         confirmBtn.style.color = '#11111b';
@@ -290,7 +290,7 @@ function openAnimadexModal(charWidget, btnWidget, node) {
         }
 
         for (let i = startPage; i <= endPage; i++) {
-            footer.appendChild(createBtn(i.toString(), i, i === currentPage));
+            footer.appendChild(createBtn(i.toString(), i, i === state.currentPage));
         }
 
         if (endPage < totalPages) {
@@ -302,8 +302,8 @@ function openAnimadexModal(charWidget, btnWidget, node) {
         const next = document.createElement('button');
         next.className = 'animadex-page-btn';
         next.innerHTML = 'Next ▶';
-        next.disabled = currentPage >= totalPages;
-        next.onclick = () => { currentPage++; loadData(); };
+        next.disabled = state.currentPage >= totalPages;
+        next.onclick = () => { state.currentPage++; loadData(); };
         footer.appendChild(next);
     };
 
