@@ -1,6 +1,5 @@
 import { app } from "../../scripts/app.js";
 
-// Load CSS dynamically
 const cssId = 'animadex-css';
 if (!document.getElementById(cssId)) {
     const head = document.getElementsByTagName('head')[0];
@@ -16,6 +15,7 @@ if (!document.getElementById(cssId)) {
 let currentModal = null;
 let metadataCache = null;
 const FAV_STORAGE_KEY = 'animadex_favorites';
+const FAV_COPY_STORAGE_KEY = 'animadex_copy_favorites';
 
 app.registerExtension({
     name: "ComfyUI.Animadex.Node",
@@ -36,22 +36,22 @@ app.registerExtension({
     }
 });
 
-function getFavorites() {
+function getFavorites(key) {
     try {
-        return JSON.parse(localStorage.getItem(FAV_STORAGE_KEY)) || [];
+        return JSON.parse(localStorage.getItem(key)) || [];
     } catch {
         return [];
     }
 }
 
-function toggleFavorite(id, isFav) {
-    let favs = getFavorites();
+function toggleFavorite(key, id, isFav) {
+    let favs = getFavorites(key);
     if (isFav && !favs.includes(id)) {
         favs.push(id);
     } else if (!isFav) {
         favs = favs.filter(f => f !== id);
     }
-    localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(favs));
+    localStorage.setItem(key, JSON.stringify(favs));
 }
 
 function openAnimadexModal(charWidget, btnWidget, node) {
@@ -62,6 +62,7 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     let currentCopyright = "";
     let favOnly = false;
     let isRandom = false;
+    let totalPages = 1;
 
     const overlay = document.createElement('div');
     overlay.className = 'animadex-modal-overlay';
@@ -92,7 +93,6 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     const sidebarLists = document.createElement('div');
     sidebarLists.className = 'animadex-sidebar-lists';
 
-    // Accordions
     const createAccordion = (title, itemsContainer) => {
         const wrap = document.createElement('div');
         wrap.className = 'animadex-accordion';
@@ -158,6 +158,7 @@ function openAnimadexModal(charWidget, btnWidget, node) {
         favOnly = !favOnly;
         favBtn.classList.toggle('active', favOnly);
         currentPage = 1;
+        renderSidebar(); // Update sidebar list to show only favs
         loadData();
     };
     
@@ -180,20 +181,8 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     grid.className = 'animadex-grid';
     gridContainer.appendChild(grid);
 
-    // Footer Pagination
     const footer = document.createElement('div');
     footer.className = 'animadex-pagination';
-
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'animadex-page-btn';
-    prevBtn.innerHTML = '◀ Prev';
-    
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'animadex-page-btn';
-    nextBtn.innerHTML = 'Next ▶';
-
-    footer.appendChild(prevBtn);
-    footer.appendChild(nextBtn);
 
     main.appendChild(header);
     main.appendChild(gridContainer);
@@ -205,7 +194,6 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     document.body.appendChild(overlay);
     currentModal = overlay;
 
-    // Actions
     const close = () => {
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         currentModal = null;
@@ -223,17 +211,90 @@ function openAnimadexModal(charWidget, btnWidget, node) {
         return num.toString();
     };
     
-    // Render Sidebar items
+    // Pagination Renderer
+    const renderPagination = () => {
+        footer.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const createBtn = (text, page, isActive = false) => {
+            const b = document.createElement('button');
+            b.className = 'animadex-page-btn';
+            b.innerHTML = text;
+            if (isActive) b.classList.add('active');
+            b.onclick = () => {
+                currentPage = page;
+                loadData();
+            };
+            return b;
+        };
+
+        const createEllipsis = () => {
+            const span = document.createElement('span');
+            span.className = 'animadex-page-ellipsis';
+            span.innerHTML = '...';
+            return span;
+        };
+
+        // Prev Button
+        const prev = document.createElement('button');
+        prev.className = 'animadex-page-btn';
+        prev.innerHTML = '◀ Prev';
+        prev.disabled = currentPage <= 1;
+        prev.onclick = () => { currentPage--; loadData(); };
+        footer.appendChild(prev);
+
+        // Calculate visible pages
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+
+        if (currentPage <= 3) {
+            endPage = Math.min(5, totalPages);
+        }
+        if (currentPage >= totalPages - 2) {
+            startPage = Math.max(1, totalPages - 4);
+        }
+
+        if (startPage > 1) {
+            footer.appendChild(createBtn('1', 1));
+            if (startPage > 2) footer.appendChild(createEllipsis());
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            footer.appendChild(createBtn(i.toString(), i, i === currentPage));
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) footer.appendChild(createEllipsis());
+            footer.appendChild(createBtn(totalPages.toString(), totalPages));
+        }
+
+        // Next Button
+        const next = document.createElement('button');
+        next.className = 'animadex-page-btn';
+        next.innerHTML = 'Next ▶';
+        next.disabled = currentPage >= totalPages;
+        next.onclick = () => { currentPage++; loadData(); };
+        footer.appendChild(next);
+    };
+
     const renderSidebar = () => {
         if (!metadataCache) return;
         
         const renderList = (container, data, isCopyright) => {
             container.innerHTML = '';
-            // limit to 100 to prevent lag
             const q = currentQuery.toLowerCase();
             let filtered = data;
+            
+            const favKey = isCopyright ? FAV_COPY_STORAGE_KEY : FAV_STORAGE_KEY;
+            const currentFavs = getFavorites(favKey);
+
+            if (favOnly) {
+                // If favorites mode, filter by favorites
+                filtered = filtered.filter(d => isCopyright ? currentFavs.includes(d.name) : currentFavs.includes(d.display_name));
+            }
+            
             if (q) {
-                filtered = data.filter(d => d.name.toLowerCase().includes(q));
+                filtered = filtered.filter(d => d.name.toLowerCase().includes(q));
             }
             
             const sliced = filtered.slice(0, 100);
@@ -245,23 +306,41 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 }
                 
                 const nameSpan = document.createElement('span');
+                nameSpan.className = 'animadex-list-item-name';
                 nameSpan.textContent = item.name;
+                nameSpan.title = item.name;
                 
                 const countSpan = document.createElement('span');
                 countSpan.className = 'animadex-list-item-count';
                 countSpan.textContent = formatNumber(item.count);
-                
+
                 row.appendChild(nameSpan);
                 row.appendChild(countSpan);
+                
+                // Add heart button for copyrights
+                if (isCopyright) {
+                    const favBtn = document.createElement('button');
+                    favBtn.className = 'animadex-list-fav-btn';
+                    favBtn.innerHTML = '♥';
+                    if (currentFavs.includes(item.name)) favBtn.classList.add('active');
+                    
+                    favBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        const willBeFav = !favBtn.classList.contains('active');
+                        toggleFavorite(FAV_COPY_STORAGE_KEY, item.name, willBeFav);
+                        favBtn.classList.toggle('active');
+                        if (favOnly) renderSidebar(); // immediately hide if unfavorited
+                    };
+                    row.appendChild(favBtn);
+                }
                 
                 row.onclick = () => {
                     if (isCopyright) {
                         currentCopyright = currentCopyright === item.name ? "" : item.name;
                         currentPage = 1;
                         loadData();
-                        renderSidebar(); // re-render to update active state
+                        renderSidebar();
                     } else {
-                        // For character, just set search query
                         searchInput.value = item.name;
                         currentQuery = item.name;
                         currentPage = 1;
@@ -286,21 +365,21 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 renderSidebar();
             }
             
-            const favsList = getFavorites().join(",");
+            const favsList = getFavorites(FAV_STORAGE_KEY).join(",");
             let url = `/animadex/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&copyright=${encodeURIComponent(currentCopyright)}&favorites=${encodeURIComponent(favsList)}`;
             if (isRandom) url += `&random=1`;
             if (favOnly) url += `&fav_only=1`;
             
-            // Reset random flag so next pagination is normal
             isRandom = false; 
 
             const resp = await fetch(url);
             const data = await resp.json();
             
+            totalPages = data.pages;
             grid.innerHTML = '';
             infoText.innerHTML = `<b>${data.total.toLocaleString()}</b> characters - page ${data.page} of ${data.pages}`;
             
-            const currentFavs = getFavorites();
+            const currentFavs = getFavorites(FAV_STORAGE_KEY);
 
             data.results.forEach(char => {
                 const card = document.createElement('div');
@@ -315,7 +394,6 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 img.onerror = () => { img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23dce0e8"/></svg>'; };
                 imgContainer.appendChild(img);
                 
-                // HOVER OVERLAY
                 const overlay = document.createElement('div');
                 overlay.className = 'animadex-card-overlay';
                 
@@ -330,7 +408,7 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 favBtn.onclick = (e) => {
                     e.stopPropagation();
                     const willBeFav = !favBtn.classList.contains('active');
-                    toggleFavorite(char._display_name, willBeFav);
+                    toggleFavorite(FAV_STORAGE_KEY, char._display_name, willBeFav);
                     favBtn.classList.toggle('active');
                 };
                 
@@ -368,7 +446,6 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 
                 imgContainer.appendChild(overlay);
                 
-                // Info Section
                 const info = document.createElement('div');
                 info.className = 'animadex-card-info';
                 
@@ -384,7 +461,6 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 info.appendChild(title);
                 info.appendChild(subtitle);
                 
-                // Footer Section
                 const cFooter = document.createElement('div');
                 cFooter.className = 'animadex-card-footer';
                 
@@ -425,11 +501,11 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 grid.appendChild(card);
             });
 
-            prevBtn.disabled = data.page <= 1;
-            nextBtn.disabled = data.page >= data.pages;
+            renderPagination();
         } catch (e) {
             console.error("Animadex fetch error:", e);
             grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:#f38ba8;">Error loading data. Is the backend running?</div>`;
+            footer.innerHTML = '';
         }
     };
 
@@ -437,27 +513,14 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
         currentQuery = searchInput.value.trim();
-        renderSidebar(); // Update sidebar immediately
+        renderSidebar();
         
         searchTimeout = setTimeout(() => {
             currentPage = 1;
             loadData();
-        }, 400); // 400ms debounce for main grid
+        }, 400);
     });
 
-    prevBtn.onclick = () => {
-        if (currentPage > 1) {
-            currentPage--;
-            loadData();
-        }
-    };
-
-    nextBtn.onclick = () => {
-        currentPage++;
-        loadData();
-    };
-
-    // Initial load
     setTimeout(() => {
         searchInput.focus();
         loadData();
