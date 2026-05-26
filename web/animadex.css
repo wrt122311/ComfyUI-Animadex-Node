@@ -46,24 +46,9 @@
 .animadex-filter-section {
     padding: 10px 20px;
     border-bottom: 1px solid #313244;
-}
-
-.animadex-filter-header {
     display: flex;
-    align-items: center;
-    font-weight: bold;
-    color: #cdd6f4;
-    margin-bottom: 10px;
-}
-
-.animadex-filter-header::before {
-    content: '';
-    display: inline-block;
-    width: 4px;
-    height: 14px;
-    background: #f38ba8;
-    margin-right: 8px;
-    border-radius: 2px;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .animadex-search-input {
@@ -83,13 +68,57 @@
     border-color: #f38ba8;
 }
 
-/* 侧边栏列表 (Mock) */
-.animadex-sidebar-list {
+/* 侧边栏可折叠列表区 */
+.animadex-sidebar-lists {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 20px;
+}
+
+.animadex-accordion {
+    border-bottom: 1px solid #313244;
+}
+.animadex-accordion-header {
+    padding: 15px 20px;
+    font-weight: bold;
+    color: #cdd6f4;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #11111b;
+}
+.animadex-accordion-header:hover {
+    background: #181825;
+}
+.animadex-accordion-body {
+    max-height: 40vh;
+    overflow-y: auto;
+    background: #181825;
+    padding: 5px 0;
+}
+
+.animadex-list-item {
+    padding: 8px 20px;
     font-size: 13px;
     color: #a6adc8;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.1s;
+}
+.animadex-list-item:hover {
+    background: #313244;
+    color: #cdd6f4;
+}
+.animadex-list-item.active {
+    background: #f38ba8;
+    color: #11111b;
+    font-weight: bold;
+}
+.animadex-list-item-count {
+    font-size: 11px;
+    opacity: 0.7;
 }
 
 /* 右侧主区域 */
@@ -98,6 +127,7 @@
     display: flex;
     flex-direction: column;
     background: #181825;
+    position: relative;
 }
 
 /* 顶部信息栏 */
@@ -111,14 +141,26 @@
     border-bottom: 1px solid #313244;
 }
 
-.animadex-close-btn {
+.animadex-header-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.animadex-icon-btn {
     background: transparent;
     border: none;
     color: #a6adc8;
-    font-size: 24px;
+    font-size: 20px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
 }
-.animadex-close-btn:hover { color: #f38ba8; }
+.animadex-icon-btn:hover { color: #f38ba8; }
+.animadex-icon-btn.active { color: #f38ba8; }
+.animadex-icon-btn span { font-size: 14px; font-weight: bold; }
 
 /* 网格区域 */
 .animadex-grid-container {
@@ -133,25 +175,26 @@
     gap: 20px;
 }
 
-/* 卡片样式完全还原 */
+/* 卡片样式 */
 .animadex-card {
     background: #282838;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
     border: 1px solid #313244;
+    position: relative;
 }
 
 .animadex-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.7);
     border-color: #f38ba8;
 }
 
-/* 图片区域：完全显示，不裁剪 */
+/* 图片区域 */
 .animadex-card-img-container {
     width: 100%;
     aspect-ratio: 3/4;
@@ -160,6 +203,7 @@
     justify-content: center;
     align-items: center;
     overflow: hidden;
+    position: relative;
 }
 
 .animadex-card-img {
@@ -168,9 +212,87 @@
     object-fit: contain;
 }
 
-/* 文字区域 */
+/* ================================
+   卡片悬浮遮罩 (Hover Overlay)
+   ================================ */
+.animadex-card-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    z-index: 10;
+}
+.animadex-card:hover .animadex-card-overlay {
+    opacity: 1;
+}
+
+.animadex-overlay-top {
+    display: flex;
+    gap: 10px;
+    margin-bottom: auto; /* Push everything else down */
+}
+
+.animadex-fav-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.animadex-fav-btn:hover { background: rgba(255,255,255,0.4); }
+.animadex-fav-btn.active { color: #f38ba8; }
+
+.animadex-overlay-title {
+    font-size: 10px;
+    color: #a6adc8;
+    letter-spacing: 1px;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.animadex-trigger-box {
+    background: rgba(255,255,255,0.15);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: white;
+    word-break: break-all;
+    margin-bottom: 10px;
+}
+
+.animadex-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.animadex-tag-badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    color: white;
+}
+
+/* ================================
+   卡片下方文字区
+   ================================ */
 .animadex-card-info {
     padding: 12px 12px 8px 12px;
+    position: relative;
+    z-index: 11;
+    background: #282838;
 }
 
 .animadex-card-title {
@@ -203,6 +325,8 @@
     color: #a6adc8;
     background: #212130;
     border-top: 1px solid #313244;
+    position: relative;
+    z-index: 11;
 }
 
 .animadex-card-footer-item {
@@ -249,7 +373,7 @@
 }
 
 /* 滚动条美化 */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #11111b; }
-::-webkit-scrollbar-thumb { background: #45475a; border-radius: 4px; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #45475a; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #585b70; }

@@ -1,6 +1,7 @@
 import os
 import json
 import urllib.request
+import random
 from io import BytesIO
 import torch
 import numpy as np
@@ -20,34 +21,86 @@ except Exception as e:
 
 # Map character name + copyright to character dict
 char_dict = {}
+# Also build metadata for the sidebar
+metadata_characters = []
+copyright_counts = {}
+
 for c in char_data:
     display_name = f"{c.get('name', 'Unknown')} ({c.get('copyright_name', c.get('copyright', 'Unknown'))})"
     c['_display_name'] = display_name
     char_dict[display_name] = c
+    
+    c_name = c.get('name', '')
+    copy_name = c.get('copyright_name') or c.get('copyright') or 'Unknown'
+    count = c.get('count', 0)
+    
+    metadata_characters.append({
+        "name": c_name,
+        "display_name": display_name,
+        "copyright": copy_name,
+        "count": count
+    })
+    
+    if copy_name not in copyright_counts:
+        copyright_counts[copy_name] = 0
+    copyright_counts[copy_name] += count
+
+# Sort characters and copyrights for the sidebar by count descending
+metadata_characters.sort(key=lambda x: x['count'], reverse=True)
+metadata_copyrights = [{"name": k, "count": v} for k, v in copyright_counts.items()]
+metadata_copyrights.sort(key=lambda x: x['count'], reverse=True)
 
 char_names = list(char_dict.keys())
 if not char_names:
     char_names = ["No data loaded"]
 
+
 # -------------------------------------------------------------
-# API Route for Frontend Gallery
+# API Routes for Frontend Gallery
 # -------------------------------------------------------------
+@server.PromptServer.instance.routes.get("/animadex/metadata")
+async def get_metadata(request):
+    return web.json_response({
+        "characters": metadata_characters,
+        "copyrights": metadata_copyrights
+    })
+
+
 @server.PromptServer.instance.routes.get("/animadex/search")
 async def search_characters(request):
     query = request.rel_url.query.get("q", "").lower()
+    copy_filter = request.rel_url.query.get("copyright", "").lower()
     page = int(request.rel_url.query.get("page", "1"))
+    is_random = request.rel_url.query.get("random", "0") == "1"
+    favorites = request.rel_url.query.get("favorites", "").split(",")
+    fav_filter_only = request.rel_url.query.get("fav_only", "0") == "1"
+    
     page_size = 50
 
-    # Filter characters based on search query
+    filtered = char_data
+    
+    # 1. Filter by favorites if toggled
+    if fav_filter_only:
+        filtered = [c for c in filtered if c.get('_display_name') in favorites]
+
+    # 2. Filter by copyright exact match (case insensitive)
+    if copy_filter:
+        filtered = [c for c in filtered if (c.get('copyright_name') or c.get('copyright') or '').lower() == copy_filter]
+
+    # 3. Filter by text search query
     if query:
         filtered = [
-            c for c in char_data 
+            c for c in filtered 
             if query in c.get('name', '').lower() 
-            or query in c.get('copyright_name', '').lower()
+            or query in (c.get('copyright_name') or c.get('copyright') or '').lower()
             or query in c.get('trigger', '').lower()
         ]
-    else:
-        filtered = char_data
+
+    # 4. Randomize or sort
+    if is_random:
+        # We copy the list before shuffling so we don't modify the global reference
+        filtered = list(filtered)
+        random.shuffle(filtered)
 
     # Pagination
     total = len(filtered)
@@ -59,7 +112,7 @@ async def search_characters(request):
         "results": results,
         "total": total,
         "page": page,
-        "pages": (total + page_size - 1) // page_size
+        "pages": (total + page_size - 1) // page_size if total > 0 else 1
     })
 
 # -------------------------------------------------------------
@@ -73,8 +126,6 @@ class AnimadexCharacterNode:
     def INPUT_TYPES(s):
         return {
             "required": {
-                # The dropdown list is still required for the backend graph logic, 
-                # but we will hide it in the frontend using JS.
                 "character": (char_names,),
                 "use_high_res_image": (["false", "true"], {"default": "false"}),
             },
