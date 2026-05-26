@@ -1,0 +1,144 @@
+/* 弹窗遮罩 */
+.animadex-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 弹窗内容区 */
+.animadex-modal {
+    background: #1e1e2e;
+    border: 1px solid #313244;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1000px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+/* 顶部搜索栏 */
+.animadex-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #313244;
+    display: flex;
+    gap: 15px;
+    background: #181825;
+}
+
+.animadex-search-input {
+    flex: 1;
+    background: #11111b;
+    border: 1px solid #45475a;
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #cdd6f4;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.animadex-search-input:focus {
+    border-color: #89b4fa;
+}
+
+.animadex-close-btn {
+    background: transparent;
+    border: none;
+    color: #a6adc8;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 10px;
+}
+.animadex-close-btn:hover { color: #f38ba8; }
+
+/* 网格内容区 */
+.animadex-modal-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.animadex-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 20px;
+}
+
+/* 卡片 */
+.animadex-card {
+    background: #313244;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid transparent;
+}
+
+.animadex-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    border-color: #89b4fa;
+}
+
+.animadex-card-img {
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    background: #11111b;
+}
+
+.animadex-card-title {
+    padding: 10px;
+    font-size: 12px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #cdd6f4;
+}
+
+/* 底部翻页 */
+.animadex-modal-footer {
+    padding: 15px;
+    border-top: 1px solid #313244;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    background: #181825;
+}
+
+.animadex-page-btn {
+    background: #89b4fa;
+    color: #11111b;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.animadex-page-btn:hover { opacity: 0.8; }
+.animadex-page-btn:disabled {
+    background: #45475a;
+    color: #a6adc8;
+    cursor: not-allowed;
+}
+
+.animadex-page-info {
+    color: #a6adc8;
+    font-size: 14px;
+}
