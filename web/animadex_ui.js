@@ -16,6 +16,7 @@ let currentModal = null;
 let metadataCache = null;
 const FAV_STORAGE_KEY = 'animadex_favorites';
 const FAV_COPY_STORAGE_KEY = 'animadex_copy_favorites';
+const nodeStates = {};
 
 app.registerExtension({
     name: "ComfyUI.Animadex.Node",
@@ -57,12 +58,19 @@ function toggleFavorite(key, id, isFav) {
 function openAnimadexModal(charWidget, btnWidget, node) {
     if (currentModal) return;
 
-    let currentPage = 1;
-    let currentQuery = "";
-    let currentCopyright = "";
-    let currentExactChar = "";
-    let favOnly = false;
-    let isRandom = false;
+    if (!nodeStates[node.id]) {
+        nodeStates[node.id] = {
+            currentPage: 1,
+            currentQuery: "",
+            currentCopyright: "",
+            currentExactChar: "",
+            favOnly: false,
+            isRandom: false,
+            selectedChar: null
+        };
+    }
+    const state = nodeStates[node.id];
+
     let totalPages = 1;
 
     const overlay = document.createElement('div');
@@ -147,18 +155,19 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     randomBtn.className = 'animadex-icon-btn';
     randomBtn.innerHTML = '🎲 <span>Random</span>';
     randomBtn.onclick = () => {
-        isRandom = true;
-        currentPage = 1;
+        state.isRandom = true;
+        state.currentPage = 1;
         loadData();
     };
     
     const favBtn = document.createElement('button');
     favBtn.className = 'animadex-icon-btn';
+    if (state.favOnly) favBtn.classList.add('active');
     favBtn.innerHTML = '♥ <span>Favorites</span>';
     favBtn.onclick = () => {
-        favOnly = !favOnly;
-        favBtn.classList.toggle('active', favOnly);
-        currentPage = 1;
+        state.favOnly = !state.favOnly;
+        favBtn.classList.toggle('active', state.favOnly);
+        state.currentPage = 1;
         renderSidebar(); // Update sidebar list to show only favs
         loadData();
     };
@@ -244,14 +253,34 @@ function openAnimadexModal(charWidget, btnWidget, node) {
         prev.onclick = () => { currentPage--; loadData(); };
         footer.appendChild(prev);
 
-        // Calculate visible pages
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, currentPage + 2);
+        // Confirm Button
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'animadex-page-btn';
+        confirmBtn.style.background = '#a6e3a1';
+        confirmBtn.style.borderColor = '#a6e3a1';
+        confirmBtn.style.color = '#11111b';
+        confirmBtn.style.fontWeight = 'bold';
+        confirmBtn.innerHTML = '✅ Confirm';
+        confirmBtn.onclick = () => {
+            if (state.selectedChar && charWidget) {
+                charWidget.value = state.selectedChar._display_name;
+                btnWidget.name = "🖼️ " + state.selectedChar.name;
+                if (app.graph) app.graph.setDirtyCanvas(true);
+                close();
+            } else if (!state.selectedChar) {
+                alert("Please select a character first!");
+            }
+        };
+        footer.appendChild(confirmBtn);
 
-        if (currentPage <= 3) {
+        // Calculate visible pages
+        let startPage = Math.max(1, state.currentPage - 2);
+        let endPage = Math.min(totalPages, state.currentPage + 2);
+
+        if (state.currentPage <= 3) {
             endPage = Math.min(5, totalPages);
         }
-        if (currentPage >= totalPages - 2) {
+        if (state.currentPage >= totalPages - 2) {
             startPage = Math.max(1, totalPages - 4);
         }
 
@@ -283,13 +312,13 @@ function openAnimadexModal(charWidget, btnWidget, node) {
         
         const renderList = (container, data, isCopyright) => {
             container.innerHTML = '';
-            const q = currentQuery.toLowerCase();
+            const q = state.currentQuery.toLowerCase();
             let filtered = data;
             
             const favKey = isCopyright ? FAV_COPY_STORAGE_KEY : FAV_STORAGE_KEY;
             const currentFavs = getFavorites(favKey);
 
-            if (favOnly) {
+            if (state.favOnly) {
                 // If favorites mode, filter by favorites
                 filtered = filtered.filter(d => isCopyright ? currentFavs.includes(d.name) : currentFavs.includes(d.display_name));
             }
@@ -302,9 +331,9 @@ function openAnimadexModal(charWidget, btnWidget, node) {
             sliced.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'animadex-list-item';
-                if (isCopyright && currentCopyright === item.name) {
+                if (isCopyright && state.currentCopyright === item.name) {
                     row.classList.add('active');
-                } else if (!isCopyright && currentExactChar === item.display_name) {
+                } else if (!isCopyright && state.currentExactChar === item.display_name) {
                     row.classList.add('active');
                 }
                 
@@ -332,21 +361,21 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                         const willBeFav = !favBtn.classList.contains('active');
                         toggleFavorite(FAV_COPY_STORAGE_KEY, item.name, willBeFav);
                         favBtn.classList.toggle('active');
-                        if (favOnly) renderSidebar(); // immediately hide if unfavorited
+                        if (state.favOnly) renderSidebar(); // immediately hide if unfavorited
                     };
                     row.appendChild(favBtn);
                 }
                 
                 row.onclick = () => {
                     if (isCopyright) {
-                        currentCopyright = currentCopyright === item.name ? "" : item.name;
-                        currentExactChar = ""; // clear character isolation if work selected
-                        currentPage = 1;
+                        state.currentCopyright = state.currentCopyright === item.name ? "" : item.name;
+                        state.currentExactChar = ""; // clear character isolation if work selected
+                        state.currentPage = 1;
                         loadData();
                         renderSidebar();
                     } else {
-                        currentExactChar = currentExactChar === item.display_name ? "" : item.display_name;
-                        currentPage = 1;
+                        state.currentExactChar = state.currentExactChar === item.display_name ? "" : item.display_name;
+                        state.currentPage = 1;
                         loadData();
                         renderSidebar();
                     }
@@ -369,11 +398,11 @@ function openAnimadexModal(charWidget, btnWidget, node) {
             }
             
             const favsList = getFavorites(FAV_STORAGE_KEY).join(",");
-            let url = `/animadex/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&copyright=${encodeURIComponent(currentCopyright)}&favorites=${encodeURIComponent(favsList)}&exact=${encodeURIComponent(currentExactChar)}`;
-            if (isRandom) url += `&random=1`;
-            if (favOnly && !currentCopyright) url += `&fav_only=1`;
+            let url = `/animadex/search?q=${encodeURIComponent(state.currentQuery)}&page=${state.currentPage}&copyright=${encodeURIComponent(state.currentCopyright)}&favorites=${encodeURIComponent(favsList)}&exact=${encodeURIComponent(state.currentExactChar)}`;
+            if (state.isRandom) url += `&random=1`;
+            if (state.favOnly && !state.currentCopyright) url += `&fav_only=1`;
             
-            isRandom = false; 
+            state.isRandom = false; 
 
             const resp = await fetch(url);
             const data = await resp.json();
@@ -491,14 +520,20 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 card.appendChild(imgContainer);
                 card.appendChild(info);
                 card.appendChild(cFooter);
+                
+                if (state.selectedChar && state.selectedChar._display_name === char._display_name) {
+                    card.classList.add('selected');
+                }
 
                 card.onclick = () => {
-                    if (charWidget) {
-                        charWidget.value = char._display_name;
-                        btnWidget.name = "🖼️ " + char.name;
-                        if (app.graph) app.graph.setDirtyCanvas(true);
-                    }
-                    close();
+                    document.querySelectorAll('.animadex-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    state.selectedChar = char;
+                };
+                
+                card.ondblclick = () => {
+                    card.onclick();
+                    document.querySelector('.confirm-btn').click();
                 };
 
                 grid.appendChild(card);
@@ -515,16 +550,17 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     let searchTimeout;
     searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
-        currentQuery = searchInput.value.trim();
+        state.currentQuery = searchInput.value.trim();
         renderSidebar();
         
         searchTimeout = setTimeout(() => {
-            currentPage = 1;
+            state.currentPage = 1;
             loadData();
         }, 400);
     });
 
     setTimeout(() => {
+        if (state.currentQuery) searchInput.value = state.currentQuery;
         searchInput.focus();
         loadData();
     }, 100);

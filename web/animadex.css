@@ -27,7 +27,7 @@
 
 /* 左侧边栏 (Sidebar) */
 .animadex-sidebar {
-    width: 320px; /* Slightly wider for fav icon */
+    width: 320px;
     background: #11111b;
     border-right: 1px solid #313244;
     display: flex;
@@ -204,7 +204,7 @@
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
-    border: 1px solid #313244;
+    border: 2px solid #313244; /* Thicker border to show selected state better */
     position: relative;
 }
 
@@ -212,6 +212,11 @@
     transform: translateY(-4px);
     box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.7);
     border-color: #f38ba8;
+}
+
+.animadex-card.selected {
+    border-color: #a6e3a1;
+    box-shadow: 0 0 0 3px rgba(166, 227, 161, 0.4);
 }
 
 /* 图片区域 */
