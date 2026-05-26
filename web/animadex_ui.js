@@ -341,11 +341,13 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                         loadData();
                         renderSidebar();
                     } else {
-                        searchInput.value = item.name;
-                        currentQuery = item.name;
-                        currentPage = 1;
-                        loadData();
-                        renderSidebar();
+                        // Select character directly and close modal
+                        if (charWidget) {
+                            charWidget.value = item.display_name;
+                            btnWidget.name = "🖼️ " + item.name;
+                            if (app.graph) app.graph.setDirtyCanvas(true);
+                        }
+                        close();
                     }
                 };
                 container.appendChild(row);
