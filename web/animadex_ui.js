@@ -60,6 +60,7 @@ function openAnimadexModal(charWidget, btnWidget, node) {
     let currentPage = 1;
     let currentQuery = "";
     let currentCopyright = "";
+    let currentExactChar = "";
     let favOnly = false;
     let isRandom = false;
     let totalPages = 1;
@@ -303,6 +304,8 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 row.className = 'animadex-list-item';
                 if (isCopyright && currentCopyright === item.name) {
                     row.classList.add('active');
+                } else if (!isCopyright && currentExactChar === item.display_name) {
+                    row.classList.add('active');
                 }
                 
                 const nameSpan = document.createElement('span');
@@ -337,17 +340,15 @@ function openAnimadexModal(charWidget, btnWidget, node) {
                 row.onclick = () => {
                     if (isCopyright) {
                         currentCopyright = currentCopyright === item.name ? "" : item.name;
+                        currentExactChar = ""; // clear character isolation if work selected
                         currentPage = 1;
                         loadData();
                         renderSidebar();
                     } else {
-                        // Select character directly and close modal
-                        if (charWidget) {
-                            charWidget.value = item.display_name;
-                            btnWidget.name = "🖼️ " + item.name;
-                            if (app.graph) app.graph.setDirtyCanvas(true);
-                        }
-                        close();
+                        currentExactChar = currentExactChar === item.display_name ? "" : item.display_name;
+                        currentPage = 1;
+                        loadData();
+                        renderSidebar();
                     }
                 };
                 container.appendChild(row);
@@ -368,7 +369,7 @@ function openAnimadexModal(charWidget, btnWidget, node) {
             }
             
             const favsList = getFavorites(FAV_STORAGE_KEY).join(",");
-            let url = `/animadex/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&copyright=${encodeURIComponent(currentCopyright)}&favorites=${encodeURIComponent(favsList)}`;
+            let url = `/animadex/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&copyright=${encodeURIComponent(currentCopyright)}&favorites=${encodeURIComponent(favsList)}&exact=${encodeURIComponent(currentExactChar)}`;
             if (isRandom) url += `&random=1`;
             if (favOnly && !currentCopyright) url += `&fav_only=1`;
             
