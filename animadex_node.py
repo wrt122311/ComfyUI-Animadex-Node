@@ -82,10 +82,7 @@ async def search_characters(request):
     
     # 1. Filter by favorites if toggled
     if fav_filter_only:
-        filtered = [
-            c for c in filtered 
-            if c.get('_display_name') in favorites or (c.get('copyright_name') or c.get('copyright') or '') in fav_copies
-        ]
+        filtered = [c for c in filtered if c.get('_display_name') in favorites]
 
     # 2. Filter by copyright exact match (case insensitive)
     if copy_filter:
